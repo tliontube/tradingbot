@@ -11,7 +11,7 @@ class GeminiClient:
     def __init__(self, api_key):
         genai.configure(api_key=api_key)
 
-    def get_trading_decision(self, market_data: list[float], lookback_period: int = 20):
+    def get_trading_decision(self, market_data: list[float], lookback_period: int = 50):
         """
         Optimized method to generate a trading decision using advanced price action analysis.
         
@@ -34,8 +34,7 @@ class GeminiClient:
         volatility = self._calculate_volatility(recent_prices)
 
         prompt = f"""
-        You are a **god-level crypto scalper** with unparalleled expertise in 5-minute timeframe trading. 
-        Your task is to analyze the provided price action data and make a trading decision (buy, sell, or hold) based on **advanced price action principles**. 
+        You are a **professional crypto trader** with expertise in price action trading. Your task is to analyze the provided price action data and make a trading decision (buy, sell, or hold) based on **advanced price action principles**. 
         Use the following guidelines to determine the optimal entry, stop-loss, and take-profit levels.
 
         **Market Data:**

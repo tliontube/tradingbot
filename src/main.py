@@ -44,7 +44,7 @@ async def main():
                         )
                         await telegram_bot.send_message(message)
 
-                await asyncio.sleep(60)  # Wait 1 minute before the next iteration
+                await asyncio.sleep(300)  # Wait 1 minute before the next iteration
             except Exception as e:
                 print(f"Error in main loop: {e}")
                 await asyncio.sleep(60)  # Wait before retrying

@@ -11,7 +11,7 @@ class StrategyManager:
             return {"decision": "hold", "reason": "Waiting for current trade to complete", "stop_loss": None, "take_profit": None}
 
         # Fetch market data
-        klines_1h = await self.binance_client.get_market_data(symbol, interval="1h", limit=100)
+        klines_1h = await self.binance_client.get_market_data(symbol, interval="5m", limit=100)
         if klines_1h is None:
             return {"decision": "hold", "reason": "Unable to fetch market data", "stop_loss": None, "take_profit": None}
 
@@ -22,6 +22,10 @@ class StrategyManager:
         gemini_decision = self.gemini_client.get_trading_decision(closing_prices)
         if gemini_decision is None:
             return {"decision": "hold", "reason": "Unable to fetch trading decision", "stop_loss": None, "take_profit": None}
+
+        # Additional check: Only take trades if the trend strength is moderate or strong
+        if gemini_decision["trend_strength"] not in ["moderate", "strong"]:
+            return {"decision": "hold", "reason": "Weak trend strength", "stop_loss": None, "take_profit": None}
 
         # If the decision is not "hold", mark the current trade
         if gemini_decision["decision"] != "hold":
