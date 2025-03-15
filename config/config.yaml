@@ -1,0 +1,21 @@
+binance:
+  api_key: "FGEFmSgdqbMsyAJiiWqZzoGPxaF7xQfM5tZAY71FIEil3GMl6kiF0A56o1X1hgxh"
+  api_secret: "U8VSlncrS7fpCZsDZL1sByN4vCSsEcwzfEOtNyeWGwcJu1QXLadpUwgCnDmqmnuk"
+  demo_mode: True
+
+#deepseek:
+  #api_key: "sk-c049c700b37643ea870e8a10e5fec648"
+  #endpoint: "https://api.deepseek.com"
+gemini:
+  api_key: "AIzaSyBzLikmencflI2uTTm4_FbtFHXXIc2BLlA"
+  api_secret: "your_gemini_api_secret"
+  endpoint: "https://api.gemini.com/v1"
+
+telegram:
+  bot_token: "8138974082:AAFNXeK1AzUYJvEYfw08Zi2QXEidPlixIZk"
+  chat_id: "1170932052"
+risk_management:
+  max_position_size: 0.1  # 10% of total balance
+  stop_loss: 0.02        # 2% stop loss
+  take_profit: 0.05       # 5% take profit
+  fee_rate: 0.0004        # Binance futures trading fee
