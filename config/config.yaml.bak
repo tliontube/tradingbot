@@ -28,7 +28,7 @@ binance:
     symbol: SOLUSDT
   - description: Dogecoin
     enabled: true
-    min_quantity: 10
+    min_quantity: 100
     symbol: DOGEUSDT
   - description: Ripple
     enabled: true
