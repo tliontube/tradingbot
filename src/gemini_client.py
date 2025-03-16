@@ -49,65 +49,92 @@ class GeminiClient:
         base_asset = symbol.replace("USDT", "")
 
         prompt = f"""
-        You are a **professional crypto trader** specializing in Smart Money Concepts (SMC) and advanced price action analysis. Analyze the market structure and identify institutional price movements for {symbol}. Return ONLY a valid JSON response matching the specified format exactly.
-
-        **Market Data for {symbol} (1-minute timeframe):**
-        Opening: {recent_opens[-10:]}  # Last 10 values for readability
-        Closing: {recent_prices[-10:]}
-        Highs: {recent_highs[-10:]}
-        Lows: {recent_lows[-10:]}
-        Symbol: {symbol}
-        Asset: {base_asset}
-        Trend: {trend}
-        Strength: {trend_strength}
-        Volatility: {volatility:.4f}
-        Current Price: {recent_prices[-1]}
-
-        **Trading Fee Considerations:**
-        - Trading fee is 0.04% per trade (0.08% round trip)
-        - Take profit must be at least 0.3% from entry to be profitable
-        - Minimum risk-reward ratio must be 1:1.5
-        - For scalp trades, risk-reward should be 1:2
-
-        **Special considerations for {base_asset}:**
-        - Consider the specific characteristics of {base_asset} and its typical volatility
-        - Analyze {base_asset}-specific market dynamics and recent news/developments
-        - Include {base_asset}'s correlation with the broader market in your analysis
-        - Consider {base_asset}'s liquidity and trading volume characteristics
-
-        Rules for Stop Loss: 
-        - For LONG: Place below previous higher high or nearest active order block
-        - For SHORT: Place above previous lower high or nearest active order block
-        - Stop loss MUST be at a technically significant level, not just a fixed percentage
-        - Allow sufficient room for price to breathe (minimum 0.5% from entry for crypto)
-        - Minimum 0.5-1% away from entry price to accommodate normal market volatility
-        - DO NOT set stops too tight - they will be trailed dynamically by the system
-
-        Rules for Take Profit (in order of priority):
-        1. Break of structure to next order block
-        2. Liquidity grab levels
-        3. 50% of nearest fair value gap
-        4. Trend continuation confirmation
-        5. Next higher high (for longs) or lower low (for shorts)
-        6. Default to 1:2 risk-reward for scalp trades
-        7. Must be at least 0.3% away from entry price to cover fees and be profitable
-
-        Analyze for:
-        1. Market Structure (HH/HL, LH/LL, BOS, CHoCH)
-        2. Order Blocks and Breaker Blocks
-        3. Liquidity Grabs/Stop Hunts
-        4. Fair Value Gaps
-        5. Support/Resistance with Break & Retest
-
-        RETURN EXACTLY THIS JSON FORMAT:
+        ## PROFESSIONAL CRYPTO TRADING ANALYST
+        
+        You are a professional crypto trader analyzing {symbol} on a 5-minute timeframe. Use advanced price action analysis and Smart Money Concepts (SMC) to identify institutional movements.
+        
+        ## PRIMARY GOAL
+        Identify ONLY high-probability trading setups with clear institutional confirmation.
+        BE SELECTIVE - return "waiting" for any setup that doesn't meet ALL mandatory criteria.
+        
+        ## MARKET DATA FOR {symbol}
+        • Current Price: {recent_prices[-1]}
+        • Recent Closes (5m): {recent_prices[-15:]}
+        • Recent Highs (5m): {recent_highs[-10:]}
+        • Recent Lows (5m): {recent_lows[-10:]}
+        • Asset Base: {base_asset}
+        • Current Trend: {trend}
+        • Trend Strength: {trend_strength}
+        • Volatility: {volatility:.4f}
+        
+        ## MANDATORY CRITERIA (ALL MUST BE MET)
+        1. Direction must align with prevailing trend ({trend})
+        2. Clear Break of Structure (BOS) with Change of Character (CHoCH)
+        3. Entry at or near institutional price levels (Order Blocks/Fair Value Gaps)
+        4. Minimum 1:1.5 risk-reward ratio (preferable 1:3+)
+        5. Clean market structure (avoid choppy/sideways conditions)
+        6. Stop loss at technically valid level (not arbitrary %)
+        7. Evidence of institutional interest (liquidity sweep/stop hunts)
+        8. Entry must be within 0.5% of current price
+        
+        ## PRIORITY OF SIGNALS (HIGHEST TO LOWEST)
+        1. Order Blocks at key levels
+        2. Break of Structure (BOS) with Change of Character (CHoCH) 
+        3. Fair Value Gaps (FVG) formed by institutional candles
+        4. Liquidity grabs/sweeps of significant levels
+        5. HTF support/resistance with clear break and retest
+        
+        ## MULTI-TIMEFRAME CONSIDERATIONS
+        • Primary: 5-minute (immediate execution)
+        • Consider 5-minute trend direction
+        • Avoid trading against 15-minute trend
+        • Look for alignment across timeframes for highest probability
+        
+        ## RISK MANAGEMENT RULES
+        ### Stop Loss Placement
+        • For LONG: Below nearest active order block or previous swing low
+        • For SHORT: Above nearest active order block or previous swing high
+        • Minimum 0.5% from entry price
+        • Technical level, not arbitrary percentage
+        
+        ### Take Profit Strategy (Multiple Levels)
+        • TP1: Nearest opposing liquidity level (1:1 ratio)
+        • TP2: Next key structure level (1:2 ratio)
+        • TP3: Extended target at major level (1:3+ ratio)
+        
+        ## MARKET-SPECIFIC CONSIDERATIONS
+        • Match trading style to current {base_asset} volatility
+        • Consider {base_asset}'s correlation with BTC (avoid trading against BTC trend)
+        • Factor in {base_asset}'s liquidity profile and typical move magnitude
+        • Assess potential impact of market-wide events on {base_asset}
+        
+        ## TECHNICAL PATTERN RECOGNITION
+        • Smart Money Concepts (SMC): Order blocks, breaker blocks, FVGs
+        • Wyckoff Phases: Accumulation/Distribution/Markup/Markdown
+        • Volume Analysis: Divergence from price, climax volume
+        • Advanced PA: Engulfing patterns at key levels, multi-candle formations
+        
+        ## RULES FOR VALID RESPONSE
+        • Return "waiting" unless ALL mandatory criteria are met
+        • Provide concrete technical reasons for decisions
+        • Assess confidence level for each trade (1-10 scale)
+        • Calculate exact risk-reward ratio based on SL/TP levels
+        
+        ## JSON RESPONSE FORMAT
         {{
             "decision": "buy/sell/waiting",
-            "reason": "Clear explanation of SMC analysis for {symbol}",
+            "reason": "Concise SMC analysis with primary decision factor",
+            "confidence": number, // 1-10 scale, must be ≥7 for non-waiting decisions
             "entry_price": number,
             "stop_loss": number,
-            "take_profit": number,
+            "take_profit": {{
+                "tp1": number, // 1:1 R:R target
+                "tp2": number, // 1:2 R:R target
+                "tp3": number  // 1:3+ R:R target
+            }},
             "trend": "{trend}",
             "trend_strength": "{trend_strength}",
+            "risk_reward_ratio": number, // calculated as (take_profit.tp2 - entry_price) / (entry_price - stop_loss) for buy
             "structure_analysis": {{
                 "current_structure": "bullish/bearish/ranging",
                 "last_bos_level": number,
@@ -121,7 +148,7 @@ class GeminiClient:
                 "liquidity_pools": [
                     {{
                         "level": number,
-                        "type": "buy/sell",
+                        "type": "buy/sell side",
                         "status": "untapped/tapped"
                     }}
                 ],
@@ -147,20 +174,21 @@ class GeminiClient:
                         "type": "support/resistance",
                         "status": "confirmed/pending"
                     }}
-                ]
+                ],
+                "wyckoff_phase": "accumulation/markup/distribution/markdown/undefined",
+                "volume_analysis": "confirming/diverging/neutral/undefined"
             }}
         }}
-
-        Rules for valid response:
+        
+        IMPORTANT VALIDATION RULES:
         1. All number fields must be actual numbers, not strings
-        2. Arrays can be empty [] but must be present
-        3. All nested objects must have all required fields
-        4. No additional fields allowed
-        5. Strings must match exactly the allowed values
-        6. For any buy decision, ensure take_profit > entry_price > stop_loss
-        7. For any sell decision, ensure stop_loss > entry_price > take_profit
-        8. The difference between take_profit and entry_price must be at least 0.3% of entry_price
-        9. Stop loss must be at least 0.5% away from entry price to avoid early closure
+        2. For any buy decision: tp1 > tp2 > tp3 > entry_price > stop_loss
+        3. For any sell decision: stop_loss > entry_price > tp3 > tp2 > tp1
+        4. Risk-reward ratio must be ≥1.5 
+        5. Confidence must be ≥7 for non-waiting decisions
+        6. Entry must be within 0.5% of current price ({recent_prices[-1]})
+        7. Stop loss must be at least 0.5% from entry price
+        8. Take profit must be at least 0.3% from entry price to cover fees
         """
 
         try:
@@ -229,7 +257,7 @@ class GeminiClient:
 
     def _validate_decision(self, decision_data: dict) -> bool:
         """
-        Validate the decision data returned by Gemini, including SMC analysis.
+        Validate the updated decision data returned by Gemini, including enhanced SMC analysis.
 
         Args:
             decision_data (dict): Decision data to validate.
@@ -238,10 +266,49 @@ class GeminiClient:
             bool: True if the decision data is valid, False otherwise.
         """
         try:
-            # Required keys for SMC strategy
+            # Required keys for SMC strategy with enhanced analysis
             required_keys = [
-                "decision", "reason", "entry_price", "trend", "trend_strength", "structure_analysis"
+                "decision", "reason", "entry_price", "trend", 
+                "trend_strength", "structure_analysis"
             ]
+            
+            # Check for new confidence field, add default if missing
+            if "confidence" not in decision_data:
+                if decision_data.get("decision", "waiting") != "waiting":
+                    decision_data["confidence"] = 7  # Default confidence for non-waiting
+                else:
+                    decision_data["confidence"] = 3  # Default low confidence for waiting
+            
+            # Check for risk_reward_ratio, add if missing
+            if "risk_reward_ratio" not in decision_data and decision_data.get("decision", "waiting") != "waiting":
+                # Add calculated risk_reward_ratio if possible
+                entry_price = decision_data.get("entry_price")
+                stop_loss = decision_data.get("stop_loss")
+                
+                if entry_price is not None and stop_loss is not None:
+                    if isinstance(decision_data.get("take_profit"), dict) and "tp2" in decision_data["take_profit"]:
+                        tp2 = decision_data["take_profit"]["tp2"]
+                        if decision_data.get("decision") == "buy":
+                            risk = entry_price - stop_loss
+                            reward = tp2 - entry_price
+                        else:  # sell
+                            risk = stop_loss - entry_price
+                            reward = entry_price - tp2
+                            
+                        if risk > 0:
+                            decision_data["risk_reward_ratio"] = reward / risk
+                    elif isinstance(decision_data.get("take_profit"), (int, float)):
+                        # For backward compatibility with old format
+                        take_profit = decision_data["take_profit"]
+                        if decision_data.get("decision") == "buy":
+                            risk = entry_price - stop_loss
+                            reward = take_profit - entry_price
+                        else:  # sell
+                            risk = stop_loss - entry_price
+                            reward = entry_price - take_profit
+                            
+                        if risk > 0:
+                            decision_data["risk_reward_ratio"] = reward / risk
             
             # Check main required keys
             missing_keys = [key for key in required_keys if key not in decision_data]
@@ -254,104 +321,85 @@ class GeminiClient:
                 if "stop_loss" not in decision_data or "take_profit" not in decision_data:
                     logger.error("Missing stop_loss or take_profit for non-waiting decision")
                     return False
-
-            # Validate structure analysis
-            structure_keys = [
-                "current_structure", "last_bos_level",
-                "key_order_blocks", "liquidity_pools",
-                "market_structure", "fair_value_gaps", "break_and_retest"
-            ]
-            
-            # Check structure analysis keys
-            if "structure_analysis" not in decision_data:
-                logger.error("Missing structure_analysis in decision data")
-                return False
                 
-            missing_structure_keys = [key for key in structure_keys if key not in decision_data["structure_analysis"]]
-            if missing_structure_keys:
-                logger.error(f"Missing structure analysis keys: {missing_structure_keys}")
-                return False
-
-            # Validate market structure components
-            market_structure_keys = [
-                "recent_highs", "recent_lows", "structure_type", "last_choch"
-            ]
-            
-            # New fields are optional to maintain backward compatibility
-            optional_market_keys = ["prev_higher_high", "prev_lower_high", "next_key_level"]
-            
-            if "market_structure" not in decision_data["structure_analysis"]:
-                logger.error("Missing market_structure in structure_analysis")
-                return False
+                # Handle the different take profit formats
+                take_profit_main = None
                 
-            missing_market_keys = [key for key in market_structure_keys if key not in decision_data["structure_analysis"]["market_structure"]]
-            if missing_market_keys:
-                logger.error(f"Missing market structure keys: {missing_market_keys}")
-                return False
-                
-            # Add default values for optional keys if missing
-            for key in optional_market_keys:
-                if key not in decision_data["structure_analysis"]["market_structure"]:
-                    current_price = decision_data["entry_price"]
-                    if key == "prev_higher_high":
-                        decision_data["structure_analysis"]["market_structure"][key] = current_price * 1.01
-                    elif key == "prev_lower_high":
-                        decision_data["structure_analysis"]["market_structure"][key] = current_price * 0.99
-                    elif key == "next_key_level":
-                        decision_data["structure_analysis"]["market_structure"][key] = current_price * 1.02
-                    logger.warning(f"Added default value for missing {key}")
-
-            # Validate fair value gaps have size field
-            if decision_data["structure_analysis"]["fair_value_gaps"]:
-                for gap in decision_data["structure_analysis"]["fair_value_gaps"]:
-                    # If any field is missing, add default values rather than failing
-                    if "level" not in gap:
-                        gap["level"] = decision_data["entry_price"]
-                    if "size" not in gap:
-                        gap["size"] = 0
-                    if "status" not in gap:
-                        gap["status"] = "unfilled"
-
-            # Validate decision type
-            if decision_data["decision"] not in ["buy", "sell", "waiting"]:
-                logger.error(f"Invalid decision type: {decision_data['decision']}")
-                return False
-
-            # Validate trend type
-            if decision_data["trend"] not in ["uptrend", "downtrend", "sideways"]:
-                logger.error(f"Invalid trend: {decision_data['trend']}")
-                return False
-
-            # Validate trend strength
-            if decision_data["trend_strength"] not in ["weak", "moderate", "strong"]:
-                logger.error(f"Invalid trend strength: {decision_data['trend_strength']}")
-                return False
-
-            # Validate structure
-            if decision_data["structure_analysis"]["current_structure"] not in ["bullish", "bearish", "ranging"]:
-                logger.error(f"Invalid current_structure: {decision_data['structure_analysis']['current_structure']}")
-                return False
-
-            # Validate market structure type
-            if decision_data["structure_analysis"]["market_structure"]["structure_type"] not in ["HH-HL", "LH-LL", "Ranging"]:
-                logger.error(f"Invalid structure_type: {decision_data['structure_analysis']['market_structure']['structure_type']}")
-                return False
-
-            # Validate stop loss and take profit based on decision
-            if decision_data["decision"] != "waiting":
-                # If stop_loss or take_profit is None, validation fails
-                if decision_data["stop_loss"] is None or decision_data["take_profit"] is None:
-                    logger.error("stop_loss or take_profit is None for a non-waiting decision")
-                    return False
+                if isinstance(decision_data["take_profit"], dict):
+                    # We have multiple TP levels
+                    if "tp2" in decision_data["take_profit"]:
+                        take_profit_main = decision_data["take_profit"]["tp2"]  # Use middle target
+                    elif "tp1" in decision_data["take_profit"]:
+                        take_profit_main = decision_data["take_profit"]["tp1"]  # Use first target
+                    else:
+                        # Use any available target
+                        take_profit_main = next(iter(decision_data["take_profit"].values()))
+                        
+                    # Validate TP levels are properly ordered
+                    if decision_data["decision"] == "buy":
+                        if "tp1" in decision_data["take_profit"] and "tp2" in decision_data["take_profit"] and "tp3" in decision_data["take_profit"]:
+                            tp1 = decision_data["take_profit"]["tp1"]
+                            tp2 = decision_data["take_profit"]["tp2"]
+                            tp3 = decision_data["take_profit"]["tp3"]
+                            entry = decision_data["entry_price"]
+                            
+                            # Check order: entry < tp1 < tp2 < tp3
+                            if not (entry < tp1 < tp2 < tp3):
+                                logger.warning("Take profit levels not properly ordered for BUY, fixing...")
+                                # Fix the order
+                                if tp1 <= entry:
+                                    tp1 = entry * 1.01  # 1% above entry
+                                if tp2 <= tp1:
+                                    tp2 = tp1 * 1.01  # 1% above tp1
+                                if tp3 <= tp2:
+                                    tp3 = tp2 * 1.01  # 1% above tp2
+                                    
+                                decision_data["take_profit"] = {
+                                    "tp1": tp1,
+                                    "tp2": tp2,
+                                    "tp3": tp3
+                                }
+                        
+                    elif decision_data["decision"] == "sell":
+                        if "tp1" in decision_data["take_profit"] and "tp2" in decision_data["take_profit"] and "tp3" in decision_data["take_profit"]:
+                            tp1 = decision_data["take_profit"]["tp1"]
+                            tp2 = decision_data["take_profit"]["tp2"]
+                            tp3 = decision_data["take_profit"]["tp3"]
+                            entry = decision_data["entry_price"]
+                            
+                            # Check order: tp3 < tp2 < tp1 < entry
+                            if not (tp3 < tp2 < tp1 < entry):
+                                logger.warning("Take profit levels not properly ordered for SELL, fixing...")
+                                # Fix the order
+                                if tp1 >= entry:
+                                    tp1 = entry * 0.99  # 1% below entry
+                                if tp2 >= tp1:
+                                    tp2 = tp1 * 0.99  # 1% below tp1
+                                if tp3 >= tp2:
+                                    tp3 = tp2 * 0.99  # 1% below tp2
+                                    
+                                decision_data["take_profit"] = {
+                                    "tp1": tp1,
+                                    "tp2": tp2,
+                                    "tp3": tp3
+                                }
+                    
+                    # Save the primary take profit for backward compatibility
+                    decision_data["take_profit_levels"] = decision_data["take_profit"].copy()
+                    decision_data["take_profit"] = take_profit_main
+                    
+                else:
+                    # Single take profit value (old format)
+                    take_profit_main = decision_data["take_profit"]
                 
                 # Ensure stop_loss and take_profit are numbers
-                if not isinstance(decision_data["stop_loss"], (int, float)) or not isinstance(decision_data["take_profit"], (int, float)):
-                    logger.error(f"stop_loss or take_profit is not a number: {type(decision_data['stop_loss'])}, {type(decision_data['take_profit'])}")
+                if not isinstance(decision_data["stop_loss"], (int, float)) or not isinstance(take_profit_main, (int, float)):
+                    logger.error(f"stop_loss or take_profit is not a number: {type(decision_data['stop_loss'])}, {type(take_profit_main)}")
                     return False
                 
                 entry_price = decision_data["entry_price"]
                 stop_loss = decision_data["stop_loss"]
-                take_profit = decision_data["take_profit"]
+                take_profit = take_profit_main
                 
                 # Ensure take profit is sufficiently away from entry
                 if decision_data["decision"] == "buy":
@@ -415,6 +463,21 @@ class GeminiClient:
                     logger.warning(f"Insufficient risk-reward ratio for scalp: {reward/risk:.2f}, will be adjusted by StrategyManager")
                     # This will be fixed by StrategyManager, so we don't fail here
 
+            # Validate confidence score for non-waiting decisions
+            if "confidence" in decision_data:
+                confidence = decision_data["confidence"]
+                if not isinstance(confidence, (int, float)) or confidence < 1 or confidence > 10:
+                    logger.warning(f"Invalid confidence score: {confidence}, setting to default 7")
+                    decision_data["confidence"] = 7
+                elif confidence < 7:
+                    logger.warning(f"Low confidence score: {confidence}, might override to waiting")
+                    # For very low confidence scores, consider changing to waiting
+                    if confidence < 5:
+                        logger.warning("Very low confidence, changing decision to waiting")
+                        decision_data["decision"] = "waiting"
+                        decision_data["reason"] = f"Original reason with insufficient confidence ({confidence}/10): {decision_data['reason']}"
+                        return True
+
             return True
             
         except Exception as e:
@@ -426,7 +489,7 @@ class GeminiClient:
     def _calculate_trend_strength(self, prices: list[float]) -> str:
         """
         Calculate the strength of the trend based on recent price action.
-        Adjusted for 1-minute timeframe to be more sensitive to short-term moves.
+        Adjusted for 5-minute timeframe to be more sensitive to short-term moves.
 
         Args:
             prices (list[float]): List of recent closing prices.
@@ -439,10 +502,10 @@ class GeminiClient:
         avg_price = sum(prices) / len(prices)
         change_percentage = (absolute_change / avg_price) * 100
 
-        # Adjusted thresholds for 1-minute timeframe
+        # Adjusted thresholds for 5-minute timeframe
         if change_percentage < 0.15:  # More sensitive to small moves
             return "weak"
-        elif 0.15 <= change_percentage < 0.5:  # Moderate moves in 1-minute
+        elif 0.15 <= change_percentage < 0.5:  # Moderate moves in 5-minute
             return "moderate"
         else:
             return "strong"
@@ -450,7 +513,7 @@ class GeminiClient:
     def _calculate_volatility(self, prices: list[float]) -> float:
         """
         Calculate dynamic volatility based on recent price movements.
-        Optimized for 1-minute timeframe.
+        Optimized for 5-minute timeframe.
 
         Args:
             prices (list[float]): List of recent closing prices.
