@@ -14,7 +14,16 @@ class BinanceClient:
                 else:
                     raise ValueError(f"Invalid klines data: {klines}")
             else:
-                return klines
+                # Process klines to extract both price and volume data
+                processed_data = {
+                    "closing_prices": [float(k[4]) for k in klines],  # Close price
+                    "volumes": [float(k[5]) for k in klines],         # Volume
+                    "high_prices": [float(k[2]) for k in klines],     # High price
+                    "low_prices": [float(k[3]) for k in klines],      # Low price
+                    "open_prices": [float(k[1]) for k in klines],     # Open price
+                    "timestamps": [int(k[0]) for k in klines]         # Timestamp
+                }
+                return processed_data
         except Exception as e:
             print(f"Error fetching market data for {symbol}: {e}")
             return None

@@ -29,8 +29,8 @@ async def main():
                     decision = await strategy_manager.decide_strategy("BTCUSDT")
                     print("Decision:", decision)  # Print the full decision for debugging
 
-                    # If the decision is not "hold", send a message to Telegram
-                    if decision["decision"] != "hold":
+                    # Send message to Telegram for all decisions
+                    if decision["decision"] in ["buy", "sell"]:
                         message = (
                             f"🚨 *New Trading Signal* 🚨\n\n"
                             f"📊 **Decision**: {decision['decision'].upper()}\n"
@@ -39,12 +39,29 @@ async def main():
                             f"🛑 **Stop-Loss**: {decision['stop_loss']}\n"
                             f"🎯 **Take-Profit**: {decision['take_profit']}\n"
                             f"📈 **Trend**: {decision['trend'].capitalize()}\n"
-                            f"💪 **Trend Strength**: {decision['trend_strength'].capitalize()}\n\n"
+                            f"💪 **Trend Strength**: {decision['trend_strength'].capitalize()}\n"
+                            f"📊 **Volume Analysis**:\n"
+                            f"   • Average Volume: {decision['volume_analysis']['average_volume']:.2f}\n"
+                            f"   • Recent Volume: {decision['volume_analysis']['recent_volume']:.2f}\n"
+                            f"   • Volume Change: {decision['volume_analysis']['volume_change']}\n\n"
                             f"Good luck! 🚀"
                         )
-                        await telegram_bot.send_message(message)
+                    else:  # waiting decision
+                        message = (
+                            f"⏳ *Market Analysis Update* ⏳\n\n"
+                            f"📊 **Status**: Waiting for Better Setup\n"
+                            f"📝 **Analysis**: {decision['reason']}\n"
+                            f"📈 **Current Trend**: {decision['trend'].capitalize()}\n"
+                            f"💪 **Trend Strength**: {decision['trend_strength'].capitalize()}\n"
+                            f"📊 **Volume Analysis**:\n"
+                            f"   • Average Volume: {decision['volume_analysis']['average_volume']:.2f}\n"
+                            f"   • Recent Volume: {decision['volume_analysis']['recent_volume']:.2f}\n"
+                            f"   • Volume Change: {decision['volume_analysis']['volume_change']}\n\n"
+                            f"Staying patient for the right opportunity! 🎯"
+                        )
+                    await telegram_bot.send_message(message)
 
-                await asyncio.sleep(300)  # Wait 1 minute before the next iteration
+                await asyncio.sleep(100)  # Wait 5 minutes before the next iteration
             except Exception as e:
                 print(f"Error in main loop: {e}")
                 await asyncio.sleep(60)  # Wait before retrying

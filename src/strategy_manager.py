@@ -8,27 +8,27 @@ class StrategyManager:
     async def decide_strategy(self, symbol):
         # Check if there is an active trade
         if self.current_trade is not None:
-            return {"decision": "hold", "reason": "Waiting for current trade to complete", "stop_loss": None, "take_profit": None}
+            return {"decision": "waiting", "reason": "Waiting for current trade to complete", "stop_loss": None, "take_profit": None}
 
         # Fetch market data
-        klines_1h = await self.binance_client.get_market_data(symbol, interval="5m", limit=100)
-        if klines_1h is None:
-            return {"decision": "hold", "reason": "Unable to fetch market data", "stop_loss": None, "take_profit": None}
-
-        # Extract closing prices
-        closing_prices = [float(k[4]) for k in klines_1h]
+        market_data = await self.binance_client.get_market_data(symbol, interval="5m", limit=100)
+        if market_data is None:
+            return {"decision": "waiting", "reason": "Unable to fetch market data", "stop_loss": None, "take_profit": None}
 
         # Get trading decision from Gemini
-        gemini_decision = self.gemini_client.get_trading_decision(closing_prices)
+        gemini_decision = self.gemini_client.get_trading_decision(
+            closing_prices=market_data["closing_prices"],
+            volumes=market_data["volumes"],
+            high_prices=market_data["high_prices"],
+            low_prices=market_data["low_prices"],
+            open_prices=market_data["open_prices"]
+        )
+        
         if gemini_decision is None:
-            return {"decision": "hold", "reason": "Unable to fetch trading decision", "stop_loss": None, "take_profit": None}
+            return {"decision": "waiting", "reason": "Unable to fetch trading decision", "stop_loss": None, "take_profit": None}
 
-        # Additional check: Only take trades if the trend strength is moderate or strong
-        if gemini_decision["trend_strength"] not in ["moderate", "strong"]:
-            return {"decision": "hold", "reason": "Weak trend strength", "stop_loss": None, "take_profit": None}
-
-        # If the decision is not "hold", mark the current trade
-        if gemini_decision["decision"] != "hold":
+        # If the decision is not "waiting", mark the current trade
+        if gemini_decision["decision"] not in ["waiting"]:
             self.current_trade = {
                 "symbol": symbol,
                 "decision": gemini_decision["decision"],
