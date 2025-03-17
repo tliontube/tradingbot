@@ -4,28 +4,24 @@ binance:
   demo_mode: true
   fee_rate: 0.0004
   futures:
-    leverage: 10
+    leverage: 15
     margin_type: ISOLATED
     min_notional: 100.1
     min_quantity: 0.001
     position_side: BOTH
   trading_pairs:
-  - description: Bitcoin
-    enabled: true
-    min_quantity: 0.001
-    symbol: BTCUSDT
   - description: Ethereum
     enabled: true
     min_quantity: 0.01
     symbol: ETHUSDT
-  - description: Binance Coin
-    enabled: true
-    min_quantity: 0.1
-    symbol: BNBUSDT
   - description: Ripple
     enabled: true
     min_quantity: 10
     symbol: XRPUSDT
+  - description: TRON
+    enabled: true
+    min_quantity: 100
+    symbol: TRXUSDT
 gemini:
   api_key: AIzaSyBzLikmencflI2uTTm4_FbtFHXXIc2BLlA
   api_secret: your_gemini_api_secret

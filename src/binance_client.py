@@ -14,7 +14,7 @@ class BinanceClient:
         # Flag to indicate we're using futures
         self.using_futures = True
         # Futures settings
-        self.futures_leverage = 10
+        self.futures_leverage = 15  # Changed default to 15x
         self.futures_margin_type = "ISOLATED"
         self.futures_position_side = "BOTH"
 
@@ -33,7 +33,7 @@ class BinanceClient:
             # Load configuration if provided
             if config and 'futures' in config.get('binance', {}):
                 futures_config = config['binance']['futures']
-                self.futures_leverage = futures_config.get('leverage', 10)
+                self.futures_leverage = futures_config.get('leverage', 15)  # Changed default to 15
                 self.futures_margin_type = futures_config.get('margin_type', 'ISOLATED')
                 self.futures_position_side = futures_config.get('position_side', 'BOTH')
                 
@@ -205,7 +205,7 @@ class BinanceClient:
             self.logger.warning(f"Could not place test order: {e}")
             return False
 
-    async def get_market_data(self, symbol, interval, limit):
+    async def get_market_data(self, symbol, interval="1m", limit=200):  # Changed default interval to 1m and limit to 200
         try:
             # Fetch candlestick data using futures endpoint
             if self.using_futures:
@@ -321,221 +321,69 @@ class BinanceClient:
             self.logger.error(f"Error fetching account balance: {e}")
             return None
 
-    async def place_order(self, symbol, side, order_type, quantity, price=None, time_in_force="GTC", reduce_only=False, positionSide=None, stop_price=None):
-        """
-        Place an order on Binance.
-        
-        Args:
-            symbol (str): The trading pair symbol (e.g., 'BTCUSDT')
-            side (str): Order side (BUY or SELL)
-            order_type (str): Order type (LIMIT, MARKET, STOP_MARKET, TAKE_PROFIT_MARKET, etc.)
-            quantity (float): Order quantity
-            price (float, optional): Order price for limit orders
-            time_in_force (str, optional): Time in force (GTC, IOC, FOK)
-            reduce_only (bool, optional): Whether this order is to reduce position only (futures only)
-            positionSide (str, optional): Position side for futures in hedged mode (LONG or SHORT)
-            stop_price (float, optional): Stop price for stop orders
-            
-        Returns:
-            dict: Order information
-        """
+    async def place_order(self, symbol, side, order_type, quantity, price=None, time_in_force="GTC", reduce_only=False, positionSide=None, stop_price=None, closePosition=False):
         try:
-            # Validate quantity is greater than zero
-            if quantity <= 0:
-                error_msg = f"Cannot place order with quantity <= 0: {quantity}"
-                self.logger.error(error_msg)
-                return {"status": "ERROR", "msg": error_msg}
-                
-            # For market orders, get the current price to calculate notional value
+            # Get symbol info and exchange filters
+            symbol_info = await self.get_symbol_info(symbol)
+            if not symbol_info:
+                return {"status": "ERROR", "msg": "Could not get symbol info"}
+
+            # Get current price for calculations
             current_price = price
             if order_type == "MARKET" or current_price is None:
                 current_price = await self.get_latest_price(symbol)
                 if not current_price:
-                    self.logger.error("Could not get latest price to calculate notional value")
                     return {"status": "ERROR", "msg": "Could not get latest price"}
+
+            # Apply precision rules
+            quantity_precision = symbol_info.get('quantityPrecision', 3)
+            price_precision = symbol_info.get('pricePrecision', 3)
             
-            # Calculate notional value (quantity * price)
+            # Round quantity and prices
+            quantity = round(quantity, quantity_precision)
+            if stop_price:
+                stop_price = round(stop_price, price_precision)
+
+            # Calculate notional value
             notional_value = quantity * current_price
-            
-            # Check minimum notional for futures
-            if self.using_futures:
-                min_notional = 100.1  # Binance Futures requires min 100.0 USDT
-                if notional_value < min_notional:
-                    self.logger.warning(f"Order notional value ({notional_value:.2f} USDT) is below minimum ({min_notional} USDT). Adjusting quantity.")
-                    # Adjust quantity to meet minimum notional
-                    new_quantity = min_notional / current_price
-                    # Round to appropriate precision
-                    symbol_info = await self.get_symbol_info(symbol)
-                    if symbol_info and 'quantityPrecision' in symbol_info:
-                        precision = symbol_info['quantityPrecision']
-                        # Round down to precision
-                        factor = 10 ** precision
-                        new_quantity = math.floor(new_quantity * factor) / factor
-                    else:
-                        # Default precision of 3
-                        new_quantity = math.floor(new_quantity * 1000) / 1000
-                    
-                    quantity = new_quantity
-                    notional_value = quantity * current_price
-                    self.logger.info(f"Adjusted quantity to {quantity} to meet minimum notional requirement. New notional: {notional_value:.2f} USDT")
-            
-            # Handle case where order_type was passed with lowercase
-            order_type = order_type.upper()
-            
-            # Map common format errors
-            if order_type == "STOP_MARKET":
-                order_type = "STOP_MARKET"  # normalize format
-            elif order_type == "TAKE_PROFIT_MARKET":
-                order_type = "TAKE_PROFIT_MARKET"  # normalize format
-            
-            self.logger.info(f"Placing {side} {order_type} order for {symbol}: quantity={quantity}, price={current_price}, notional={notional_value:.2f} USDT")
-            
-            if self.using_futures:
-                params = {
-                    "symbol": symbol,
-                    "side": side.upper(),  # Ensure side is uppercase
-                    "type": order_type,
-                    "quantity": quantity
-                }
-                
-                # Only include reduceOnly parameter if it's explicitly set to True
-                if reduce_only:
-                    params["reduceOnly"] = True
-                
-                # If in hedged mode (position_side = "BOTH"), specify the position side
-                if self.futures_position_side == "BOTH":
-                    # Use provided positionSide if available
-                    if positionSide:
-                        if positionSide in ["LONG", "SHORT"]:
-                            params["positionSide"] = positionSide
-                            self.logger.info(f"Using provided position side: {positionSide}")
-                        else:
-                            self.logger.warning(f"Invalid positionSide: {positionSide}. Must be LONG or SHORT.")
-                    elif not reduce_only:
-                        # For new positions (not reduce only), set the position side based on the order side
-                        auto_position_side = "LONG" if side.upper() == "BUY" else "SHORT"
-                        params["positionSide"] = auto_position_side
-                        self.logger.info(f"Setting position side to {auto_position_side} for {side} order")
-                
-                if order_type == "LIMIT":
-                    params["price"] = price
-                    params["timeInForce"] = time_in_force
-                
-                # For stop and take profit orders, add stopPrice
-                if order_type in ["STOP", "STOP_MARKET", "TAKE_PROFIT", "TAKE_PROFIT_MARKET", "TRAILING_STOP_MARKET"]:
-                    if stop_price is None:
-                        self.logger.error(f"Stop price is required for {order_type} orders")
-                        return {"status": "ERROR", "msg": "Stop price is required"}
-                    params["stopPrice"] = stop_price
-                
-                # Place futures order
-                try:
+
+            # Ensure minimum notional
+            if self.using_futures and notional_value < 100.1:
+                self.logger.warning(f"Order notional value ({notional_value:.2f} USDT) is below minimum (100.1 USDT)")
+                return {"status": "ERROR", "msg": "Notional value too small"}
+
+            # Prepare order parameters
+            params = {
+                "symbol": symbol,
+                "side": side.upper(),
+                "type": order_type,
+                "quantity": quantity
+            }
+
+            # Handle position side for futures
+            if self.using_futures and self.futures_position_side == "BOTH":
+                if positionSide:
+                    params["positionSide"] = positionSide
+                elif not closePosition:
+                    params["positionSide"] = "LONG" if side.upper() == "BUY" else "SHORT"
+
+            # Add stop price for stop orders
+            if order_type in ["STOP_MARKET", "TAKE_PROFIT_MARKET"]:
+                params["stopPrice"] = stop_price
+
+            # Place the order
+            try:
+                if self.using_futures:
                     order = await self.client.futures_create_order(**params)
                     self.logger.info(f"Futures order placed: {order}")
                     return order
-                except Exception as e:
-                    error_msg = str(e)
-                    if "APIError(code=-4164)" in error_msg:
-                        # This specific error means the notional value is too small
-                        actual_notional = quantity * current_price
-                        self.logger.error(f"Order placement failed: Notional too small. Required: 100.0, Actual: {actual_notional:.8f}")
-                        
-                        # Try to place with absolute minimum
-                        min_needed_qty = 100.1 / current_price
-                        symbol_info = await self.get_symbol_info(symbol)
-                        if symbol_info and 'quantityPrecision' in symbol_info:
-                            precision = symbol_info['quantityPrecision']
-                            factor = 10 ** precision
-                            min_needed_qty = math.ceil(min_needed_qty * factor) / factor
-                        
-                        self.logger.info(f"Attempting with minimum quantity: {min_needed_qty}")
-                        params["quantity"] = min_needed_qty
-                        
-                        try:
-                            order = await self.client.futures_create_order(**params)
-                            self.logger.info(f"Order placed with minimum quantity: {order}")
-                            return order
-                        except Exception as retry_error:
-                            self.logger.error(f"Failed on retry with minimum quantity: {retry_error}")
-                            
-                            # If the error is related to position side, try to fix it
-                            if "APIError(code=-4061)" in str(retry_error):
-                                self.logger.warning("Position side error detected, trying to fix...")
-                                
-                                # Adjust position side if needed
-                                if self.futures_position_side == "BOTH":
-                                    if "positionSide" in params:
-                                        # Try the opposite position side as last resort
-                                        opposite_position_side = "SHORT" if params["positionSide"] == "LONG" else "LONG"
-                                        params["positionSide"] = opposite_position_side
-                                        self.logger.info(f"Retrying with opposite position side: {opposite_position_side}")
-                                        
-                                        try:
-                                            order = await self.client.futures_create_order(**params)
-                                            self.logger.info(f"Order placed with adjusted position side: {order}")
-                                            return order
-                                        except Exception as final_error:
-                                            self.logger.error(f"Final attempt failed: {final_error}")
-                            
-                            return None
-                    else:
-                        raise e
-            else:
-                params = {
-                    "symbol": symbol,
-                    "side": side,
-                    "type": order_type,
-                    "quantity": quantity
-                }
-                
-                if order_type == "LIMIT":
-                    params["price"] = price
-                    params["timeInForce"] = time_in_force
-                
-                # For stop orders in spot
-                if "STOP" in order_type:
-                    if stop_price is None:
-                        self.logger.error(f"Stop price is required for {order_type} orders")
-                        return {"status": "ERROR", "msg": "Stop price is required"}
-                    params["stopPrice"] = stop_price
-                
-                # Place spot order
-                order = await self.client.create_order(**params)
-                self.logger.info(f"Spot order placed: {order}")
-                return order
-        except Exception as e:
-            # Check for specific error codes
-            error_msg = str(e)
-            if "APIError(code=-4003)" in error_msg:
-                self.logger.error(f"Error placing order: Quantity less than or equal to zero. Provided quantity: {quantity}")
-                # Check the account balance to provide more context
-                try:
-                    account = await self.client.futures_account()
-                    usdt_balance = None
-                    for asset in account.get('assets', []):
-                        if asset['asset'] == 'USDT':
-                            usdt_balance = float(asset.get('availableBalance', 0))
-                            break
-                            
-                    self.logger.info(f"Current USDT balance: {usdt_balance}")
-                    
-                    if usdt_balance is not None and usdt_balance < 10:
-                        self.logger.warning(f"Low USDT balance detected: {usdt_balance}. Need to fund testnet account.")
-                        await self.fund_testnet_account()
-                except Exception as balance_e:
-                    self.logger.error(f"Error checking balance: {balance_e}")
-            elif "APIError(code=-2019)" in error_msg:
-                self.logger.error(f"Error placing order: Margin is insufficient. Need to fund account or reduce position size.")
-            elif "APIError(code=-4164)" in error_msg:
-                actual_notional = quantity * current_price
-                self.logger.error(f"Error placing order: Order's notional must be no smaller than 100.0. Current notional: quantity * price = {actual_notional}")
-                if current_price and current_price > 0:
-                    min_quantity = 100.1 / current_price
-                    self.logger.info(f"To meet minimum notional of 100.0 USDT, quantity should be at least {min_quantity:.8f} {symbol.replace('USDT', '')}")
-            else:
+            except Exception as e:
                 self.logger.error(f"Error placing order: {e}")
-                
-            return None
+                return {"status": "ERROR", "msg": str(e)}
+
+        except Exception as e:
+            self.logger.error(f"Error in place_order: {e}")
+            return {"status": "ERROR", "msg": str(e)}
 
     async def cancel_order(self, symbol, order_id):
         """
@@ -623,23 +471,34 @@ class BinanceClient:
             symbol (str): The trading pair symbol (e.g., 'BTCUSDT')
             
         Returns:
-            dict: Cancellation result
+            bool: True if all orders are canceled successfully, False otherwise.
         """
         try:
-            if self.using_futures:
-                result = await self.client.futures_cancel_all_open_orders(symbol=symbol)
+            self.logger.info(f"Fetching open orders for {symbol}...")
+            open_orders = await self.get_open_orders(symbol)
+            if not open_orders:
+                self.logger.info(f"No open orders found for {symbol}.")
+                return True
+
+            self.logger.info(f"Cancelling {len(open_orders)} open orders for {symbol}...")
+            for order in open_orders:
+                try:
+                    await self.cancel_order(symbol, order["orderId"])
+                except Exception as e:
+                    self.logger.warning(f"Failed to cancel order {order['orderId']} for {symbol}: {e}")
+                    continue
+
+            # Verify all orders are canceled
+            remaining_orders = await self.get_open_orders(symbol)
+            if not remaining_orders:
+                self.logger.info(f"All orders successfully canceled for {symbol}.")
+                return True
             else:
-                # For spot, we need to cancel orders one by one
-                open_orders = await self.get_open_orders(symbol)
-                results = []
-                for order in open_orders:
-                    cancel_result = await self.cancel_order(symbol, order["orderId"])
-                    results.append(cancel_result)
-                return results
-            return result
+                self.logger.warning(f"Some orders could not be canceled for {symbol}: {remaining_orders}")
+                return False
         except Exception as e:
-            self.logger.error(f"Error cancelling all orders: {e}")
-            return None
+            self.logger.error(f"Error cancelling all orders for {symbol}: {e}")
+            return False
 
     async def get_price_precision(self, symbol):
         """
@@ -661,3 +520,71 @@ class BinanceClient:
         except Exception as e:
             self.logger.error(f"Error getting price precision: {e}")
             return 2  # Default to 2 decimal places
+
+    async def get_leverage(self, symbol):
+        """
+        Get the current leverage for a futures symbol.
+        
+        Args:
+            symbol (str): The trading pair symbol (e.g., 'BTCUSDT')
+            
+        Returns:
+            int: Current leverage for the symbol
+        """
+        try:
+            if not self.using_futures:
+                self.logger.error("Leverage is only applicable for futures trading.")
+                return None
+
+            # Fetch position information for the symbol
+            positions = await self.client.futures_position_information(symbol=symbol)
+            for position in positions:
+                if position["symbol"] == symbol:
+                    leverage = int(position["leverage"])
+                    self.logger.info(f"Current leverage for {symbol}: {leverage}x")
+                    return leverage
+
+            self.logger.warning(f"No position found for {symbol}. Returning default leverage: {self.futures_leverage}x")
+            return self.futures_leverage  # Return default leverage if no position is found
+        except Exception as e:
+            self.logger.error(f"Error fetching leverage for {symbol}: {e}")
+            return None
+
+    async def get_min_quantity(self, symbol):
+        """
+        Get the minimum order quantity for a symbol from Binance's exchange info.
+        
+        Args:
+            symbol (str): The trading pair symbol (e.g., 'BTCUSDT')
+            
+        Returns:
+            float: Minimum quantity for the symbol
+        """
+        try:
+            symbol_info = await self.get_symbol_info(symbol)
+            if symbol_info and "filters" in symbol_info:
+                for filter in symbol_info["filters"]:
+                    if filter["filterType"] == "LOT_SIZE":
+                        return float(filter["minQty"])
+            self.logger.warning(f"Could not fetch minimum quantity for {symbol}. Using default of 0.001.")
+            return 0.001  # Default minimum quantity
+        except Exception as e:
+            self.logger.error(f"Error fetching minimum quantity for {symbol}: {e}")
+            return 0.001  # Default minimum quantity
+
+    async def set_leverage(self, symbol, leverage):
+        """Set leverage for a symbol."""
+        try:
+            for attempt in range(3):  # Retry up to 3 times
+                try:
+                    response = await self.client.futures_change_leverage(symbol=symbol, leverage=leverage)
+                    self.logger.info(f"Set leverage for {symbol} to {leverage}x: {response}")
+                    return response
+                except Exception as e:
+                    self.logger.warning(f"Attempt {attempt + 1} failed to set leverage for {symbol}: {e}")
+                    await asyncio.sleep(1)  # Wait before retrying
+            self.logger.error(f"Failed to set leverage for {symbol} after 3 attempts.")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error setting leverage for {symbol}: {e}")
+            return None

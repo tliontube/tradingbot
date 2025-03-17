@@ -1,0 +1,149 @@
+[
+  {
+    "pnl_percent": 0,
+    "hold_time": 0,
+    "volume_profile": {
+      "relative_volume": 1
+    },
+    "market_structure": {
+      "trend_strength": 0
+    },
+    "pre_entry_candles": [],
+    "market_conditions": {
+      "liquidity_sweep": 0,
+      "order_block_strength": 0,
+      "fvg_presence": 0,
+      "bos_confirmed": 0,
+      "choch_confirmed": 0
+    },
+    "entry_quality": 0.5
+  },
+  {
+    "pnl_percent": 2.0,
+    "hold_time": 300,
+    "volume_profile": {
+      "relative_volume": 1.2
+    },
+    "market_structure": {
+      "trend_strength": 0.8
+    },
+    "pre_entry_candles": [],
+    "market_conditions": {
+      "liquidity_sweep": 1
+    },
+    "entry_quality": 0.8
+  },
+  {
+    "pnl_percent": -1.0,
+    "hold_time": 150,
+    "volume_profile": {
+      "relative_volume": 0.8
+    },
+    "market_structure": {
+      "trend_strength": 0.3
+    },
+    "pre_entry_candles": [],
+    "market_conditions": {
+      "liquidity_sweep": 0
+    },
+    "entry_quality": 0.3
+  },
+  {
+    "pnl_percent": 0,
+    "hold_time": 0,
+    "volume_profile": {
+      "relative_volume": 1
+    },
+    "market_structure": {
+      "trend_strength": 0
+    },
+    "pre_entry_candles": [],
+    "market_conditions": {
+      "liquidity_sweep": 0,
+      "order_block_strength": 0,
+      "fvg_presence": 0,
+      "bos_confirmed": 0,
+      "choch_confirmed": 0
+    },
+    "entry_quality": 0.5
+  },
+  {
+    "pnl_percent": 2.0,
+    "hold_time": 300,
+    "volume_profile": {
+      "relative_volume": 1.2
+    },
+    "market_structure": {
+      "trend_strength": 0.8
+    },
+    "pre_entry_candles": [],
+    "market_conditions": {
+      "liquidity_sweep": 1
+    },
+    "entry_quality": 0.8
+  },
+  {
+    "pnl_percent": -1.0,
+    "hold_time": 150,
+    "volume_profile": {
+      "relative_volume": 0.8
+    },
+    "market_structure": {
+      "trend_strength": 0.3
+    },
+    "pre_entry_candles": [],
+    "market_conditions": {
+      "liquidity_sweep": 0
+    },
+    "entry_quality": 0.3
+  },
+  {
+    "pnl_percent": 0,
+    "hold_time": 0,
+    "volume_profile": {
+      "relative_volume": 1
+    },
+    "market_structure": {
+      "trend_strength": 0
+    },
+    "pre_entry_candles": [],
+    "market_conditions": {
+      "liquidity_sweep": 0,
+      "order_block_strength": 0,
+      "fvg_presence": 0,
+      "bos_confirmed": 0,
+      "choch_confirmed": 0
+    },
+    "entry_quality": 0.5
+  },
+  {
+    "pnl_percent": 2.0,
+    "hold_time": 300,
+    "volume_profile": {
+      "relative_volume": 1.2
+    },
+    "market_structure": {
+      "trend_strength": 0.8
+    },
+    "pre_entry_candles": [],
+    "market_conditions": {
+      "liquidity_sweep": 1
+    },
+    "entry_quality": 0.8
+  },
+  {
+    "pnl_percent": -1.0,
+    "hold_time": 150,
+    "volume_profile": {
+      "relative_volume": 0.8
+    },
+    "market_structure": {
+      "trend_strength": 0.3
+    },
+    "pre_entry_candles": [],
+    "market_conditions": {
+      "liquidity_sweep": 0
+    },
+    "entry_quality": 0.3
+  }
+]
